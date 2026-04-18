@@ -47,7 +47,7 @@ components:
           default: false
         grounding_required:
           type: boolean
-          description: Override: force grounding verification
+          description: "Override: force grounding verification"
           default: false
 
     VerifyResponse:
