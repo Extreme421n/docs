@@ -1,97 +1,114 @@
 {
-  "$schema": "https://mintlify.com/schema.json",
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
   "name": "PromptWall",
-  "logo": {
-    "dark": "/images/logo-dark.svg",
-    "light": "/images/logo-light.svg"
-  },
-  "favicon": "/images/favicon.svg",
   "colors": {
     "primary": "#2563EB",
     "light": "#60A5FA",
-    "dark": "#1E40AF",
-    "anchors": {
-      "from": "#2563EB",
-      "to": "#8B5CF6"
-    }
+    "dark": "#1E40AF"
   },
-  "topbarCtaButton": {
-    "name": "Dashboard",
-    "url": "https://www.prompt-wall.com"
-  },
-  "topbarLinks": [
-    {
-      "name": "Support",
-      "url": "mailto:support@prompt-wall.com"
-    }
-  ],
-  "anchors": [
-    {
-      "name": "API Reference",
-      "icon": "code",
-      "url": "api-reference"
-    },
-    {
-      "name": "GitHub",
-      "icon": "github",
-      "url": "https://github.com/Extreme421n/PromptWall-full-backup"
-    }
-  ],
-  "navigation": [
-    {
-      "group": "Get Started",
-      "pages": [
-        "introduction",
-        "quickstart",
-        "concepts/overview",
-        "concepts/modes",
-        "concepts/governance",
-        "concepts/billing"
-      ]
-    },
-    {
-      "group": "Guides",
-      "pages": [
-        "guides/python-sdk",
-        "guides/node-sdk",
-        "guides/webhooks",
-        "guides/byok",
-        "guides/verify-mode"
-      ]
-    },
-    {
-      "group": "API Reference",
-      "pages": [
-        "api-reference/introduction",
-        "api-reference/authentication",
+  "favicon": "/favicon.svg",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Concepts",
+            "pages": [
+              "concepts/overview",
+              "concepts/modes",
+              "concepts/governance",
+              "concepts/billing"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/python-sdk",
+              "guides/node-sdk",
+              "guides/webhooks",
+              "guides/byok",
+              "guides/verify-mode"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Introduction",
+            "pages": [
+              "api-reference/introduction",
+              "api-reference/authentication"
+            ]
+          },
+          {
+            "group": "Core",
+            "pages": [
+              "api-reference/verify",
+              "api-reference/chat"
+            ]
+          },
+          {
+            "group": "Tools",
+            "pages": [
+              "api-reference/tools-register",
+              "api-reference/tools-list",
+              "api-reference/tools-test"
+            ]
+          },
+          {
+            "group": "Usage & Billing",
+            "pages": [
+              "api-reference/usage-current",
+              "api-reference/usage-timeseries"
+            ]
+          }
+        ]
+      }
+    ],
+    "global": {
+      "anchors": [
         {
-          "group": "Core",
-          "pages": [
-            "api-reference/verify",
-            "api-reference/chat"
-          ]
+          "anchor": "Dashboard",
+          "href": "https://www.prompt-wall.com",
+          "icon": "gauge"
         },
         {
-          "group": "Tools",
-          "pages": [
-            "api-reference/tools-register",
-            "api-reference/tools-list",
-            "api-reference/tools-test"
-          ]
+          "anchor": "GitHub",
+          "href": "https://github.com/Extreme421n/PromptWall-full-backup",
+          "icon": "github"
         },
         {
-          "group": "Usage & Billing",
-          "pages": [
-            "api-reference/usage-current",
-            "api-reference/usage-timeseries"
-          ]
+          "anchor": "Support",
+          "href": "mailto:support@prompt-wall.com",
+          "icon": "envelope"
         }
       ]
     }
-  ],
-  "footerSocials": {
-    "github": "https://github.com/Extreme421n",
-    "twitter": "https://twitter.com/promptwall"
   },
-  "openapi": "openapi.yaml"
+  "navbar": {
+    "primary": {
+      "type": "button",
+      "label": "Open Dashboard",
+      "href": "https://www.prompt-wall.com"
+    }
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/Extreme421n"
+    }
+  },
+  "api": {
+    "openapi": "openapi.yaml"
+  }
 }
