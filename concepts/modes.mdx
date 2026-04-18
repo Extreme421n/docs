@@ -1,0 +1,101 @@
+---
+title: "Operational modes"
+description: "Verify / Webhook BYOK / Webhook Managed"
+---
+
+PromptWall offers three modes depending on **who owns the LLM tokens**:
+
+<CardGroup cols={3}>
+  <Card title="Verify Only" icon="badge-check">
+    You already have an answer.
+    We validate it.
+  </Card>
+  <Card title="Webhook BYOK" icon="key">
+    You bring your LLM API key.
+    We run the full pipeline.
+  </Card>
+  <Card title="Webhook Managed" icon="cloud">
+    We provide the LLM.
+    You just send prompts.
+  </Card>
+</CardGroup>
+
+## 1. Verify Only
+
+**Flow**:
+
+```
+Your App → /v1/verify {prompt, answer, tool_result} → PromptWall
+    ← {governance, confidence, evidence_consistent}
+```
+
+No LLM call is made by PromptWall. We validate the answer against the
+tool_result (or against detected internal knowledge). Fastest and cheapest.
+
+**When to use**:
+- You already call the LLM yourself and want an independent sanity check
+- You're adding governance to an existing pipeline with minimal surface-area change
+- You want lowest latency (~150ms p95)
+
+**Pricing structure**: flat monthly fee + small overage per request.
+
+## 2. Webhook BYOK (Bring Your Own Key)
+
+**Flow**:
+
+```
+Your App → /v1/chat {prompt}
+           → PromptWall: scanner → policy → grounding → your tool webhook
+           → PromptWall → LLM (using YOUR OpenAI/Anthropic key) → judge → enforce
+           ← {answer, governance, ...}
+```
+
+You store your LLM API key encrypted in PromptWall (Fernet + KMS). We use it
+to call the LLM on your behalf. You pay the LLM provider directly.
+
+**When to use**:
+- You already have provider contracts (OpenAI enterprise, Azure, etc.)
+- You want full pipeline: scan → LLM → verify → audit
+- You don't want PromptWall markup on tokens
+
+**Pricing structure**: flat monthly + per-request overage. LLM tokens billed
+by OpenAI/Anthropic directly to you.
+
+## 3. Webhook Managed
+
+**Flow**:
+
+```
+Your App → /v1/chat {prompt}
+           → PromptWall runs everything including LLM call with OUR key
+           ← {answer, governance, ...}
+```
+
+PromptWall owns all LLM costs. We charge you per request + markup on tokens.
+
+**When to use**:
+- You want the simplest integration (no LLM provider setup)
+- Variable load where fixed commitment doesn't make sense
+- Team doesn't want to manage multiple vendor relationships
+
+**Pricing structure**: per-request + token markup (1.15x - 1.50x based on tier).
+
+## Comparison
+
+|  | Verify | BYOK | Managed |
+|---|---|---|---|
+| LLM tokens | n/a | Customer pays provider | PromptWall |
+| Integration complexity | Low | Medium | Low |
+| Latency | ~150ms | ~800ms | ~800ms |
+| Our cost per request | $0.0001 | $0.001 | $0.001 + tokens |
+| Best for | Existing pipelines | Enterprise with provider contracts | Startups, variable load |
+
+## Switching modes
+
+A single tenant can use multiple modes via different API keys:
+
+- Create a new "app" in the dashboard
+- Choose the mode per-app
+- Point your code at the appropriate API key
+
+Usage, billing, and limits are tracked separately per app.

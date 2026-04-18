@@ -1,0 +1,48 @@
+---
+title: "Verify Mode — validation only"
+description: "Independent sanity check on answers you already have"
+---
+
+## When to use
+
+- Your app already calls the LLM and gets an answer
+- You want independent governance without rearchitecting
+- You need the lowest latency (~150ms p95)
+
+## Example
+
+```python
+# 1. Your existing LLM call
+answer = my_llm.chat("What is our MRR?")
+tool_data = our_billing_api.get_mrr()
+
+# 2. Add PromptWall verification
+from promptwall import PromptWall
+pw = PromptWall(api_key="pk_...")
+
+result = pw.verify(
+    prompt=user_question,
+    answer=answer,
+    tool_result=tool_data,
+)
+
+if result.governance == "block":
+    return "Sorry, I can't verify that information."
+
+return result.answer  # may be rewritten with caveats
+```
+
+## What Verify checks
+
+- **Evidence consistency** — does the answer match `tool_result`?
+- **Security** — canary words, secret patterns, PII leaks
+- **Mismatch type** — contradiction / numeric / insufficient evidence
+- **Confidence** — high / medium / low
+
+## What Verify does NOT do
+
+- Does NOT call an LLM (no latency, no token cost)
+- Does NOT ground answers against external sources (you supply them)
+- Does NOT rewrite unless Security policy triggers
+
+For rewrites / regeneration, use `/v1/chat` instead.

@@ -1,33 +1,35 @@
 ---
-title: 'Introduction'
-description: 'Example section for showcasing API endpoints'
+title: "API Reference"
+description: "Complete reference for PromptWall endpoints"
 ---
 
-<Note>
-  If you're not looking to build API reference documentation, you can delete
-  this section by removing the api-reference folder.
-</Note>
+Base URL: `https://api.prompt-wall.com`
 
-## Welcome
+All endpoints require authentication. See [Authentication](/api-reference/authentication).
 
-There are two ways to build API documentation: [OpenAPI](https://mintlify.com/docs/api-playground/openapi/setup) and [MDX components](https://mintlify.com/docs/api-playground/mdx/configuration). For the starter kit, we are using the following OpenAPI specification.
+## Versioning
 
-<Card
-  title="Plant Store Endpoints"
-  icon="leaf"
-  href="https://github.com/mintlify/starter/blob/main/api-reference/openapi.json"
->
-  View the OpenAPI specification file
-</Card>
+Current version: `v1`. Breaking changes will be introduced as `v2`, `v3`, etc.
 
-## Authentication
+## Rate limits
 
-All API endpoints are authenticated using Bearer tokens and picked up from the specification file.
+- Default: **120 requests/min** per API key
+- Strict endpoints (policy mutations): **30/min**
+
+Exceeded limits return `429` with `Retry-After` header.
+
+## Response format
+
+Success responses have `"ok": true`. Error responses have `"ok": false`
+with an `error` object:
 
 ```json
-"security": [
-  {
-    "bearerAuth": []
+{
+  "ok": false,
+  "error": {
+    "code": "QUOTA_EXCEEDED",
+    "message": "Plan quota exceeded (10001/10000)",
+    "plan_id": "byok_starter"
   }
-]
+}
 ```

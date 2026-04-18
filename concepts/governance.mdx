@@ -1,0 +1,52 @@
+---
+title: "Governance"
+description: "How PromptWall decides to allow, rewrite, or block"
+---
+
+The governance engine is PromptWall's core — a deterministic decision pipeline
+that produces one of four outcomes for every request:
+
+| Action | Meaning |
+|--------|---------|
+| `allow` | Answer passes all checks; return as-is |
+| `rewrite` | Answer modified (caveats added, content redacted) |
+| `regenerate` | Answer rejected; LLM asked again with stronger grounding |
+| `block` | Policy violation; no answer returned |
+
+## The deciders
+
+<Steps>
+  <Step title="Scanner">
+    Regex + heuristics on input. Blocks known injection patterns.
+  </Step>
+  <Step title="Policy engine">
+    Tenant-specific allow/block rules. Highest priority.
+  </Step>
+  <Step title="Judge (LLM)">
+    Validates answer consistency with source data.
+  </Step>
+  <Step title="Evidence evaluator">
+    Confidence scoring + secret pattern detection.
+  </Step>
+  <Step title="Enforcement">
+    Combines all signals into the final `governance_action`.
+  </Step>
+</Steps>
+
+## Configuration
+
+Set `POLICY_MODE` per deployment:
+
+- `enforce` (default) — apply decisions as-is
+- `observe` — log decisions but always allow (shadow mode, useful for rollout)
+
+## Custom policies
+
+In the dashboard, create policies per tenant with:
+
+- Pattern matchers (regex)
+- Keyword lists
+- Severity (low / medium / high / critical)
+- Action (allow / rewrite / block)
+
+Policies are evaluated in order. First match wins.

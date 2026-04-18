@@ -1,0 +1,46 @@
+---
+title: "Node.js SDK"
+description: "Official TypeScript/JavaScript client (coming soon)"
+---
+
+<Note>
+  **Status:** in development. Expected release: Q3 2026. Join the waitlist at
+  [support@prompt-wall.com](mailto:support@prompt-wall.com).
+</Note>
+
+## Meanwhile — use fetch
+
+```typescript
+const PROMPTWALL_API_KEY = process.env.PROMPTWALL_API_KEY!;
+const BASE = "https://api.prompt-wall.com";
+
+async function verify(prompt: string, answer: string, toolResult?: any) {
+  const res = await fetch(`${BASE}/v1/verify`, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${PROMPTWALL_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ prompt, answer, tool_result: toolResult }),
+  });
+  if (!res.ok) throw new Error(`PromptWall ${res.status}`);
+  return res.json();
+}
+```
+
+## Planned API
+
+```typescript
+// Coming soon
+import { PromptWall } from "@promptwall/sdk";
+
+const pw = new PromptWall({ apiKey: process.env.PROMPTWALL_API_KEY });
+
+const result = await pw.verify({
+  prompt: "What is the capital of France?",
+  answer: "Paris",
+  toolResult: "Paris",
+});
+
+if (result.governance === "block") throw new Error(...);
+```

@@ -1,0 +1,89 @@
+---
+title: "Python SDK"
+description: "The official promptwall package"
+---
+
+## Install
+
+```bash
+pip install promptwall
+```
+
+## Setup
+
+```python
+from promptwall import PromptWall
+
+pw = PromptWall(api_key="pk_...")  # or from PROMPTWALL_API_KEY env
+```
+
+## Verify mode
+
+```python
+result = pw.verify(
+    prompt="What's our Q3 revenue?",
+    answer="Our Q3 revenue was $4.2M.",
+    tool_result={"q3_revenue": 4200000},
+)
+
+if result.governance == "block":
+    raise PolicyError(result.matches)
+
+print(result.answer)  # possibly rewritten
+```
+
+## Chat mode (BYOK / Managed)
+
+```python
+response = pw.chat(
+    prompt="Summarize last quarter's KPIs",
+    model="gpt-4o-mini",
+)
+
+print(response.answer)
+print(response.confidence)  # "high" | "medium" | "low"
+```
+
+## Tool registration
+
+```python
+tool = pw.tools.register(
+    name="revenue_api",
+    webhook_url="https://api.acme.com/v1/revenue",
+    auth_type="bearer",
+    auth_token="internal_token",
+    grounding_keywords=["revenue", "mrr", "arr"],
+)
+print(tool.signing_secret)  # save this to verify incoming webhooks
+```
+
+## Async client
+
+```python
+from promptwall import AsyncPromptWall
+
+async def main():
+    pw = AsyncPromptWall(api_key="pk_...")
+    result = await pw.verify(prompt="...", answer="...")
+
+asyncio.run(main())
+```
+
+## Error handling
+
+```python
+from promptwall import PromptWall, PolicyError, QuotaExceeded
+
+pw = PromptWall(api_key="pk_...")
+
+try:
+    result = pw.chat(prompt="...")
+except PolicyError as e:
+    logger.warning(f"Blocked: {e.reasons}")
+except QuotaExceeded as e:
+    logger.error(f"Over quota: {e.requests_used}/{e.requests_included}")
+```
+
+## Full reference
+
+See [github.com/Extreme421n/PromptWall-full-backup/tree/main/promptwall-sdk](https://github.com/Extreme421n/PromptWall-full-backup/tree/main/promptwall-sdk).

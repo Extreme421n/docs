@@ -1,0 +1,74 @@
+---
+title: "Welcome to PromptWall"
+description: "The runtime control layer for LLM-based applications"
+---
+
+<img
+  className="block dark:hidden"
+  src="/images/hero-light.png"
+  alt="PromptWall Hero"
+/>
+<img
+  className="hidden dark:block"
+  src="/images/hero-dark.png"
+  alt="PromptWall Hero"
+/>
+
+## What is PromptWall?
+
+PromptWall sits between your application and foundation models (OpenAI,
+Anthropic, Google, Azure, Bedrock) and enforces:
+
+- **Prompt injection detection** — blocks jailbreak, exfiltration, and tool-smuggling attacks
+- **Answer grounding** — verifies LLM responses match verified sources; rejects hallucinations
+- **Tool governance** — webhooks registered by you, executed with HMAC signing and SSRF protection
+- **Full audit trail** — every request logged; optional zero-retention mode with S3 + KMS
+- **Learning loop** — feedback captured with PII redaction, used to tune policies over time
+
+<CardGroup cols={2}>
+  <Card
+    title="Quickstart (5 minutes)"
+    icon="rocket"
+    href="/quickstart"
+  >
+    From signup to your first verified answer in five minutes.
+  </Card>
+  <Card
+    title="Concepts"
+    icon="book-open"
+    href="/concepts/overview"
+  >
+    How PromptWall works, its three operational modes, and the governance pipeline.
+  </Card>
+  <Card
+    title="API Reference"
+    icon="code"
+    href="/api-reference/introduction"
+  >
+    Complete reference for `/v1/verify`, `/v1/chat`, and the tool registry.
+  </Card>
+  <Card
+    title="Python SDK"
+    icon="python"
+    href="/guides/python-sdk"
+  >
+    `pip install promptwall` — the official Python client.
+  </Card>
+</CardGroup>
+
+## Three modes, one API
+
+| Mode | Who pays for LLM tokens | Best for |
+|------|-------------------------|----------|
+| **Verify only** | No LLM call | Customer already has an answer, wants it validated |
+| **Webhook BYOK** | You (customer's API key) | You control the LLM, we govern the pipeline |
+| **Webhook Managed** | PromptWall | Fastest integration; we run the LLM for you |
+
+See [Modes](/concepts/modes) for the full breakdown.
+
+## Production-ready from day one
+
+- **SOC2-friendly architecture** — KMS envelope encryption, audit archival, zero-retention mode
+- **Multi-tenant isolation** — row-level security at the database layer
+- **EU hosting** — Frankfurt region with GDPR-compliant data residency
+- **SLA tiers** — 99.5% / 99.9% / 99.99% uptime based on plan

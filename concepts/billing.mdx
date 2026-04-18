@@ -1,0 +1,54 @@
+---
+title: "Billing & Usage"
+description: "How pricing, quotas, and overage work"
+---
+
+## Plans
+
+Three modes × three tiers = nine plans:
+
+|  | Starter | Pro | Enterprise |
+|--|---------|-----|------------|
+| **Verify Only** | -- | -- | -- |
+| **Webhook BYOK** | -- | -- | -- |
+| **Webhook Managed** | -- | -- | Custom |
+
+All pricing currently in alpha — contact us for details.
+
+## Quota enforcement
+
+Every request checks:
+
+```python
+if usage.requests > plan.included_requests:
+    if plan.allow_overage:
+        # continue, bill overage
+    else:
+        return 429 "Quota exceeded"
+```
+
+Counters reset monthly (billing period). Overage is billed per request at
+the end of the month.
+
+## Tracking usage
+
+```bash
+curl https://api.prompt-wall.com/v1/usage \
+  -H "Authorization: Bearer pk_..."
+```
+
+Response:
+```json
+{
+  "requests_used": 1247,
+  "requests_included": 10000,
+  "tokens_used": 45120,
+  "period_start": "2026-04-01",
+  "period_end": "2026-04-30",
+  "overage_usd": 0
+}
+```
+
+## Dashboard
+
+See real-time usage + projections in the [Metering tab](https://www.prompt-wall.com/metering).
