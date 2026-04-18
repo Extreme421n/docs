@@ -1,46 +1,157 @@
 ---
 title: "Node.js SDK"
-description: "Official TypeScript/JavaScript client (coming soon)"
+description: "Official TypeScript/JavaScript client for PromptWall"
 ---
 
-<Note>
-  **Status:** in development. Expected release: Q3 2026. Join the waitlist at
-  [support@prompt-wall.com](mailto:support@prompt-wall.com).
-</Note>
+The `@promptwall/node` package is the official Node.js SDK for PromptWall.
+Zero runtime dependencies (uses native `fetch` on Node 18+), full TypeScript
+types, and a typed error hierarchy you can branch on.
 
-## Meanwhile — use fetch
+## Install
 
-```typescript
-const PROMPTWALL_API_KEY = process.env.PROMPTWALL_API_KEY!;
-const BASE = "https://api.prompt-wall.com";
-
-async function verify(prompt: string, answer: string, toolResult?: any) {
-  const res = await fetch(`${BASE}/v1/verify`, {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${PROMPTWALL_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ prompt, answer, tool_result: toolResult }),
-  });
-  if (!res.ok) throw new Error(`PromptWall ${res.status}`);
-  return res.json();
-}
+```bash
+npm install @promptwall/node
 ```
 
-## Planned API
+Requires **Node.js 18+**.
 
-```typescript
-// Coming soon
-import { PromptWall } from "@promptwall/sdk";
+## Quickstart
+
+```ts
+import { PromptWall } from '@promptwall/node';
 
 const pw = new PromptWall({ apiKey: process.env.PROMPTWALL_API_KEY });
 
 const result = await pw.verify({
-  prompt: "What is the capital of France?",
-  answer: "Paris",
-  toolResult: "Paris",
+  prompt: 'What is the capital of France?',
+  answer: 'Paris is the capital of France.',
+  toolResult: 'Paris',
 });
 
-if (result.governance === "block") throw new Error(...);
+console.log(result.governance);          // 'allow' | 'rewrite' | 'block' | 'regenerate'
+console.log(result.confidence);          // 'high' | 'medium' | 'low'
+console.log(result.evidenceConsistent);  // true / false
+console.log(result.requestId);
 ```
+
+`PROMPTWALL_API_KEY` is read from the environment automatically when you don't
+pass `apiKey` explicitly.
+
+## Verify mode
+
+Validate an answer you already have. Fastest, cheapest path.
+
+```ts
+const r = await pw.verify({
+  prompt: 'What was Q3 revenue?',
+  answer: 'Q3 revenue was $12.4M.',
+  toolResult: { quarter: 'Q3', revenue_usd: 12_400_000 },
+  verifiedSourceUsed: true,
+  groundingRequired: true,
+});
+
+if (r.governance === 'block')          { /* PromptWall blocked */ }
+if (r.mismatchType === 'numeric')      { /* numbers don't match source */ }
+```
+
+## Chat mode (full pipeline)
+
+Runs scanner → policy → grounding → tool → LLM → judge → enforcement.
+
+```ts
+const r = await pw.chat({
+  prompt: 'Summarize last week’s sales.',
+  model: 'gpt-4o-mini',
+  provider: 'openai',
+  temperature: 0.2,
+});
+
+console.log(r.answer);
+console.log(r.tokens);                  // { prompt, completion, total }
+console.log(r.verifiedSourceUsed);
+```
+
+## Tool registry
+
+```ts
+const tool = await pw.tools.register({
+  name: 'billing_api',
+  webhookUrl: 'https://api.acme.com/v1/billing',
+  authType: 'bearer',
+  authToken: process.env.BILLING_API_TOKEN,
+  category: 'metrics',
+  groundingKeywords: ['revenue', 'mrr', 'billing'],
+  trustTier: 'customer',
+  timeoutMs: 5_000,
+  rateLimitRpm: 60,
+});
+
+console.log('Save this:', tool.signingSecret);
+
+const health = await pw.tools.test(tool.id);
+const tools = await pw.tools.list();
+```
+
+## Usage
+
+```ts
+const usage = await pw.usage.current();
+const series = await pw.usage.timeseries(14);
+```
+
+## Errors
+
+Every error is an instance of `PromptWallError`. Branch on subclasses:
+
+```ts
+import {
+  PromptWall,
+  AuthError,
+  BlockedError,
+  QuotaError,
+  SubscriptionError,
+  TimeoutError,
+  APIError,
+} from '@promptwall/node';
+
+try {
+  await pw.verify({ prompt, answer });
+} catch (err) {
+  if (err instanceof BlockedError)        { /* policy blocked */ }
+  else if (err instanceof QuotaError)     { /* err.retryAfterMs */ }
+  else if (err instanceof SubscriptionError) { /* upgrade required */ }
+  else if (err instanceof AuthError)      { /* bad API key */ }
+  else if (err instanceof TimeoutError)   { /* network slow */ }
+  else if (err instanceof APIError)       { /* 5xx, network error */ }
+  else throw err;
+}
+```
+
+Every error carries `status`, `code`, `requestId`, and `raw`.
+
+## Cancellation
+
+```ts
+const ctrl = new AbortController();
+setTimeout(() => ctrl.abort(), 500);
+
+await pw.verify({ prompt, answer }, { signal: ctrl.signal });
+```
+
+## Configuration
+
+```ts
+const pw = new PromptWall({
+  apiKey: 'pk_live_...',                   // or PROMPTWALL_API_KEY
+  baseUrl: 'https://api.prompt-wall.com',  // self-hosted override
+  timeoutMs: 30_000,
+  maxRetries: 2,                           // retries 408/425/429/5xx
+  defaultHeaders: { 'X-Tenant': 'acme' },
+  fetch: customFetch,                      // optional polyfill
+});
+```
+
+<Note>
+  The SDK retries 408/425/429/5xx with exponential backoff and honors
+  `Retry-After` headers. Set `maxRetries: 0` to disable.
+</Note>
