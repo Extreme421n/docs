@@ -1,0 +1,154 @@
+---
+title: "Events mode"
+description: "Observability-only ingest. Use when PromptWall did NOT execute the LLM call."
+---
+
+Events mode is the right choice when:
+
+- PromptWall did **not** execute the LLM call (your own SDK, a vendor
+  like Moveo / Intercom Fin / Salesforce Einstein, or any code path
+  you don't want to route through a proxy).
+- You want observability without changing your request path.
+- You're backfilling historical traces from a log archive.
+
+<Note>
+Events mode is **observability-only** — there is no enforcement, no
+mutation, and no upstream call. If you want runtime control on the
+same calls, use Proxy or Verify mode instead.
+</Note>
+
+## How it works
+
+```
+your code ──► LLM (anywhere)
+   │
+   └─► POST /v1/events  {request_id, mode, provider, model, tokens, …}
+                                                   │
+                                                   ▼
+                                     same canonical Trace row that
+                                     Proxy and Verify produce
+```
+
+The request is recorded under the same `traces` table the rest of
+PromptWall uses, so the call shows up on the Observability dashboard
+within seconds and is sliceable by every dimension you tag.
+
+## Setup
+
+<CodeGroup>
+
+```python Python
+import requests, time, uuid
+
+requests.post(
+    "https://api.prompt-wall.com/v1/events",
+    headers={"X-API-Key": "YOUR_PROMPTWALL_KEY",
+             "Content-Type": "application/json"},
+    json={
+        "request_id":      uuid.uuid4().hex,
+        "mode":            "ingest",                  # or "proxy" | "sdk" | "vendor"
+        "started_at":      time.time(),
+        "provider":        "openai",
+        "model":           "gpt-4o-mini",
+        # Dimensions
+        "use_case":        "customer_support",
+        "team_id":         "support-eu",
+        "integration_id":  "sdk:my-app@1.0",
+        "end_user_id":     "user-pseudonym",
+        "session_id":      "conversation-id",
+        # Metrics (all optional)
+        "prompt_tokens":     42,
+        "completion_tokens": 110,
+        "total_tokens":      152,
+        "cost_usd":          0.0008,
+        "latency_ms":        820,
+        "status":            "ok",
+        # Optional outcome flags
+        "final_decision":    "pass",                  # pass | rewrite | block
+        "risk_score":        0.05,
+    },
+)
+```
+
+```javascript Node.js
+import { randomUUID } from "node:crypto";
+
+await fetch("https://api.prompt-wall.com/v1/events", {
+  method: "POST",
+  headers: {
+    "X-API-Key":    process.env.PROMPTWALL_KEY,
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    request_id:        randomUUID(),
+    mode:              "ingest",
+    started_at:        Date.now() / 1000,
+    provider:          "openai",
+    model:             "gpt-4o-mini",
+    use_case:          "customer_support",
+    team_id:           "support-eu",
+    integration_id:    "sdk:my-app@1.0",
+    prompt_tokens:     42,
+    completion_tokens: 110,
+    cost_usd:          0.0008,
+    latency_ms:        820,
+    status:            "ok",
+  }),
+});
+```
+
+```bash cURL
+curl https://api.prompt-wall.com/v1/events \
+  -H "X-API-Key: $PROMPTWALL_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "request_id":      "'$(uuidgen)'",
+    "mode":            "ingest",
+    "provider":        "openai",
+    "model":           "gpt-4o-mini",
+    "use_case":        "customer_support",
+    "prompt_tokens":   42,
+    "completion_tokens": 110,
+    "status":          "ok"
+  }'
+```
+
+</CodeGroup>
+
+## Batching
+
+Send up to **500** events in one POST by wrapping them in an `events`
+array:
+
+```json
+{
+  "events": [
+    { "request_id": "abc-1", "mode": "ingest", "provider": "openai", … },
+    { "request_id": "abc-2", "mode": "ingest", "provider": "openai", … }
+  ]
+}
+```
+
+The response reports per-event acceptance:
+
+```json
+{
+  "ok":       true,
+  "accepted": 498,
+  "skipped":   2,        // duplicate request_id — already on file
+  "rejected": [],
+  "total":    500
+}
+```
+
+## Idempotency
+
+`request_id` is the primary key. Submitting the same `request_id`
+twice never creates two rows — the second call returns `skipped: true`.
+This makes batch retries safe.
+
+## See also
+
+- [Authentication](/authentication)
+- [API reference: /v1/events](/api-reference/events)
+- [Proxy mode](/modes/proxy) · [Verify mode](/modes/verify)

@@ -1,0 +1,77 @@
+---
+title: "Integration modes"
+description: "Three ways to integrate PromptWall — Proxy, Verify, Events."
+---
+
+PromptWall supports **three integration modes**. Pick the one that
+fits your existing setup:
+
+<CardGroup cols={3}>
+  <Card title="Proxy" icon="bolt" href="/modes/proxy">
+    Drop-in OpenAI replacement. Customer changes `OPENAI_BASE_URL`,
+    keeps their OpenAI key, adds an `X-PromptWall-Api-Key` header.
+  </Card>
+  <Card title="Verify" icon="shield-check" href="/modes/verify">
+    Customer calls their LLM directly, then sends the prompt + answer
+    to `/v1/verify` for validation and policy enforcement.
+  </Card>
+  <Card title="Events" icon="chart-line" href="/modes/events">
+    Customer ships traces to `/v1/events` from their own SDK / vendor /
+    log import. Observability only — no enforcement.
+  </Card>
+</CardGroup>
+
+## Decision guide
+
+<AccordionGroup>
+  <Accordion title="Pick Proxy when…" icon="bolt">
+    - You already use the OpenAI SDK / OpenAI-compatible API.
+    - You want zero application code changes (just two env vars).
+    - You want runtime control to be **available** (opt-in via header
+      or per-tenant policy) without rewriting your app today.
+    - You want observability immediately, with no glue code.
+  </Accordion>
+  <Accordion title="Pick Verify when…" icon="shield-check">
+    - Your LLM call is wrapped in custom logic you don't want to move.
+    - You already retrieve grounding data and want PromptWall to check
+      the answer against it.
+    - You want **always-on** runtime control (block / rewrite / regenerate)
+      sitting after every LLM call.
+  </Accordion>
+  <Accordion title="Pick Events when…" icon="chart-line">
+    - PromptWall did **not** execute the LLM call (Moveo, Intercom Fin,
+      Salesforce Einstein, or your own SDK already in production).
+    - You want observability without changing the request path.
+    - You're backfilling historical traces from a log archive.
+  </Accordion>
+</AccordionGroup>
+
+## Required keys per mode
+
+| Mode    | OpenAI API key       | PromptWall API key            |
+|---------|----------------------|-------------------------------|
+| Proxy   | ✓ (forwarded to OpenAI) | ✓ (header `X-PromptWall-Api-Key`) |
+| Verify  | ✗ (you call your LLM)   | ✓ (header `X-API-Key` or `Authorization: Bearer`) |
+| Events  | ✗                       | ✓ (header `X-API-Key`)        |
+
+> **The customer's OpenAI billing is unchanged in Proxy mode.** Their
+> `Authorization: Bearer sk-...` header is forwarded verbatim — they
+> keep paying OpenAI directly. PromptWall's role is purely
+> observation + governance.
+
+## Same dashboard, no matter what mode
+
+All three modes write into the same canonical `traces` table and
+appear on the unified [Observability dashboard](https://www.prompt-wall.com/observability).
+You can filter by:
+
+- `use_case` (e.g. `customer_support`, `coding_assistant`)
+- `team_id` (e.g. `support-eu`)
+- `app_id`
+- `integration_id` (`proxy:openai`, `sdk:my-app@1.0`, `vendor:moveo`, …)
+
+Adding more dimensions never increases your bill — PromptWall prices
+on **volume** (requests + tokens), not on dimensions.
+
+→ See [Authentication](/authentication) for full key details, then
+pick a mode page for ready-to-paste snippets.

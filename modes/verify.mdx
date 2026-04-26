@@ -1,0 +1,111 @@
+---
+title: "Verify mode"
+description: "Keep your LLM. POST the prompt + answer to /v1/verify for validation and policy enforcement."
+---
+
+Verify mode is the right choice when:
+
+- Your LLM call is wrapped in custom logic you don't want to relocate
+  behind a proxy.
+- You already retrieve grounding data and want PromptWall to check the
+  answer against it.
+- You want **always-on** runtime control (block / rewrite / regenerate)
+  sitting after every LLM call, regardless of which provider you used.
+
+## How it works
+
+```
+your app ──► your LLM ──► answer
+   │
+   └────────► POST /v1/verify {prompt, answer, tool_result}
+                                    │
+                                    ├─ scan      (input)
+                                    ├─ evidence  (compare answer to tool_result)
+                                    ├─ judge     (LLM-judge fallback)
+                                    └─ enforce   (block / rewrite / regenerate)
+                                    │
+                                    ▼
+                              { answer, governance, ... }
+```
+
+## Setup
+
+<CodeGroup>
+
+```python Python
+import requests
+
+answer = your_llm("What is our Q3 revenue?")          # your existing call
+
+r = requests.post(
+    "https://api.prompt-wall.com/v1/verify",
+    headers={
+        "X-API-Key":     "YOUR_PROMPTWALL_KEY",
+        "Content-Type":  "application/json",
+        # Optional dimensions for dashboard slicing
+        "X-Use-Case":    "internal_qa",
+        "X-Team-Id":     "finance",
+    },
+    json={
+        "prompt":      "What is our Q3 revenue?",
+        "answer":      answer,
+        "tool_result": "Q3 revenue: $12.4M (from internal BI)",
+    },
+).json()
+
+print(r["answer"])         # may be rewritten
+print(r["governance"])     # allow | rewrite | block | regenerate
+```
+
+```javascript Node.js
+const answer = await yourLlm("What is our Q3 revenue?");
+
+const r = await fetch("https://api.prompt-wall.com/v1/verify", {
+  method:  "POST",
+  headers: {
+    "X-API-Key":    process.env.PROMPTWALL_KEY,
+    "Content-Type": "application/json",
+    "X-Use-Case":   "internal_qa",
+    "X-Team-Id":    "finance",
+  },
+  body: JSON.stringify({
+    prompt:      "What is our Q3 revenue?",
+    answer,
+    tool_result: "Q3 revenue: $12.4M (from internal BI)",
+  }),
+}).then(x => x.json());
+
+console.log(r.answer);     // may be rewritten
+console.log(r.governance); // allow | rewrite | block | regenerate
+```
+
+```bash cURL
+curl https://api.prompt-wall.com/v1/verify \
+  -H "X-API-Key: $PROMPTWALL_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt":      "What is our Q3 revenue?",
+    "answer":      "Q3 revenue was $12.4M.",
+    "tool_result": "Q3 revenue: $12.4M (from internal BI)"
+  }'
+```
+
+</CodeGroup>
+
+## Control actions
+
+| `governance` | What happened                                              |
+|--------------|------------------------------------------------------------|
+| `allow`      | Answer passed every check — returned unchanged             |
+| `rewrite`    | Answer modified (e.g. PII redacted) — `answer_changed: true` |
+| `regenerate` | Original violated a policy; PromptWall produced a new one  |
+| `block`      | Answer cannot be returned — replaced with a safe fallback  |
+
+The full request and the decision are recorded as a trace and appear
+on the Observability dashboard.
+
+## See also
+
+- [Authentication](/authentication)
+- [API reference: /v1/verify](/api-reference/verify)
+- [Proxy mode](/modes/proxy) · [Events mode](/modes/events)

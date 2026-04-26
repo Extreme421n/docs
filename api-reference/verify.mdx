@@ -1,4 +1,86 @@
 ---
-title: "verify"
-openapi: "POST /v1/verify"
+title: "POST /v1/verify"
+description: "Validate an answer your own LLM produced. Returns the (possibly modified) answer plus a governance decision."
 ---
+
+`POST https://api.prompt-wall.com/v1/verify`
+
+Use this endpoint after your application's LLM has produced an
+answer. PromptWall scans the input, checks the answer against the
+grounding `tool_result`, and applies any policies you've configured.
+
+## Request
+
+### Required headers
+
+| Header                    | Value                                       |
+|---------------------------|---------------------------------------------|
+| `X-API-Key`               | Your PromptWall API key (`pw_…`)            |
+| `Content-Type`            | `application/json`                          |
+
+`Authorization: Bearer pw_…` is also accepted.
+
+### Optional headers
+
+| Header              | Default     | Notes                                |
+|---------------------|-------------|--------------------------------------|
+| `X-Use-Case`        | `default`   | Dashboard dimension                  |
+| `X-Team-Id`         | (unset)     | Dashboard dimension                  |
+| `X-Integration-Id`  | `api:v1_verify` | Identifies the calling integration |
+| `X-End-User-Id`     | (unset)     | End-user pseudonym                   |
+| `X-Session-Id`      | (unset)     | Multi-turn session correlation       |
+
+### Body
+
+```json
+{
+  "prompt":      "What is our Q3 revenue?",
+  "answer":      "Q3 revenue was $12.4M.",
+  "tool_result": "Q3 revenue: $12.4M (from internal BI)",
+  "model":       "gpt-4o-mini",
+  "provider":    "openai"
+}
+```
+
+## Response
+
+```json
+{
+  "ok":              true,
+  "request_id":      "1a2b3c…",
+  "answer":          "Q3 revenue was $12.4M.",
+  "answer_changed":  false,
+  "governance":      "allow",
+  "mismatch_type":   "none",
+  "policy_hits":     [],
+  "explanation":     { … }
+}
+```
+
+### `governance` field
+
+| Value        | Meaning                                                       |
+|--------------|---------------------------------------------------------------|
+| `allow`      | Answer passed every check — returned unchanged                |
+| `rewrite`    | Answer modified (e.g. PII redacted) — `answer_changed: true`  |
+| `regenerate` | Answer violated a policy; a new answer was produced           |
+| `block`      | Answer cannot be returned — replaced with a safe fallback     |
+
+### `mismatch_type` field
+
+| Value           | Meaning                                              |
+|-----------------|------------------------------------------------------|
+| `none`          | No grounding mismatch                                |
+| `numeric`       | Number in the answer doesn't match `tool_result`     |
+| `contradiction` | Direct contradiction with grounding source           |
+| `unsupported`   | Claim isn't present in the grounding source          |
+
+## Errors
+
+| Status | Body                                                  |
+|--------|-------------------------------------------------------|
+| 400    | `{"ok": false, "error": "answer is required"}`        |
+| 401    | `{"ok": false, "error": "Invalid or missing API key"}`|
+
+The full request and decision are recorded as a trace and appear on
+the [Observability dashboard](https://www.prompt-wall.com/observability).

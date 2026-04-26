@@ -1,76 +1,59 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "mint",
-  "name": "PromptWall",
+  "theme":   "mint",
+  "name":    "PromptWall",
+  "description": "AI Observability + Runtime Control. One canonical event log; multiple integration modes.",
   "colors": {
-    "primary": "#2563EB",
-    "light": "#60A5FA",
-    "dark": "#1E40AF"
+    "primary": "#3B82F6",
+    "light":   "#60A5FA",
+    "dark":    "#1E40AF"
   },
   "favicon": "/favicon.svg",
+  "logo": {
+    "light": "/logo/light.svg",
+    "dark":  "/logo/dark.svg"
+  },
+  "navbar": {
+    "links": [
+      {
+        "label": "Sign in",
+        "href":  "https://www.prompt-wall.com/login"
+      }
+    ]
+  },
   "navigation": {
     "tabs": [
       {
-        "tab": "Documentation",
+        "tab":    "Documentation",
         "groups": [
           {
-            "group": "Get Started",
+            "group": "Get started",
             "pages": [
               "introduction",
+              "integration-modes",
+              "authentication",
               "quickstart"
             ]
           },
           {
-            "group": "Concepts",
+            "group": "Integration modes",
             "pages": [
-              "concepts/overview",
-              "concepts/modes",
-              "concepts/governance",
-              "concepts/billing"
-            ]
-          },
-          {
-            "group": "Guides",
-            "pages": [
-              "guides/python-sdk",
-              "guides/node-sdk",
-              "guides/webhooks",
-              "guides/byok",
-              "guides/verify-mode"
+              "modes/proxy",
+              "modes/verify",
+              "modes/events"
             ]
           }
         ]
       },
       {
-        "tab": "API Reference",
+        "tab":    "API reference",
         "groups": [
           {
-            "group": "Introduction",
+            "group": "Endpoints",
             "pages": [
-              "api-reference/introduction",
-              "api-reference/authentication"
-            ]
-          },
-          {
-            "group": "Core",
-            "pages": [
+              "api-reference/chat-completions",
               "api-reference/verify",
-              "api-reference/chat"
-            ]
-          },
-          {
-            "group": "Tools",
-            "pages": [
-              "api-reference/tools-register",
-              "api-reference/tools-list",
-              "api-reference/tools-test"
-            ]
-          },
-          {
-            "group": "Usage & Billing",
-            "pages": [
-              "api-reference/usage-current",
-              "api-reference/usage-timeseries"
+              "api-reference/events"
             ]
           }
         ]
@@ -79,36 +62,22 @@
     "global": {
       "anchors": [
         {
-          "anchor": "Dashboard",
-          "href": "https://www.prompt-wall.com",
-          "icon": "gauge"
+          "anchor": "Observability",
+          "icon":   "chart-line",
+          "href":   "https://www.prompt-wall.com/observability"
         },
         {
           "anchor": "GitHub",
-          "href": "https://github.com/Extreme421n/PromptWall-full-backup",
-          "icon": "github"
-        },
-        {
-          "anchor": "Support",
-          "href": "mailto:support@prompt-wall.com",
-          "icon": "envelope"
+          "icon":   "github",
+          "href":   "https://github.com/Extreme421n/PromptWall-full-backup"
         }
       ]
     }
   },
-  "navbar": {
-    "primary": {
-      "type": "button",
-      "label": "Open Dashboard",
-      "href": "https://www.prompt-wall.com"
-    }
-  },
   "footer": {
     "socials": {
-      "github": "https://github.com/Extreme421n"
+      "x":      "https://twitter.com/promptwall",
+      "github": "https://github.com/Extreme421n/PromptWall-full-backup"
     }
-  },
-  "api": {
-    "openapi": "openapi.yaml"
   }
 }

@@ -1,47 +1,52 @@
 ---
-title: "Welcome to PromptWall"
-description: "The runtime control layer for LLM-based applications"
+title: "PromptWall"
+description: "AI Observability + Runtime Control. One canonical event log; multiple integration modes."
 ---
 
-## What is PromptWall?
+PromptWall sits between your application and your LLM. It captures every
+request, surfaces them on a unified Observability dashboard, and (optionally)
+enforces runtime policies — block, rewrite, or regenerate — when an answer
+violates your rules.
 
-PromptWall sits between your application and foundation models (OpenAI,
-Anthropic, Google, Azure, Bedrock) and enforces:
+You can integrate in **three ways**, all of which feed the same dashboard:
 
-- **Prompt injection detection** — blocks jailbreak, exfiltration, and tool-smuggling attacks
-- **Answer grounding** — verifies LLM responses match verified sources; rejects hallucinations
-- **Tool governance** — webhooks registered by you, executed with HMAC signing and SSRF protection
-- **Full audit trail** — every request logged; optional zero-retention mode with S3 + KMS
-- **Learning loop** — feedback captured with PII redaction, used to tune policies over time
-
-<CardGroup cols={2}>
-  <Card title="Quickstart (5 minutes)" icon="rocket" href="/quickstart">
-    From signup to your first verified answer in five minutes.
+<CardGroup cols={3}>
+  <Card title="Proxy" icon="bolt" href="/modes/proxy" color="#3B82F6">
+    **Recommended.** Drop-in OpenAI replacement. Change `OPENAI_BASE_URL`
+    to PromptWall and you get observability immediately. Runtime control
+    is opt-in.
   </Card>
-  <Card title="Concepts" icon="book-open" href="/concepts/overview">
-    How PromptWall works, its three operational modes, and the governance pipeline.
+  <Card title="Verify" icon="shield-check" href="/modes/verify" color="#10B981">
+    Keep calling your LLM directly. POST the prompt + answer to
+    `/v1/verify` and PromptWall validates it against your policies.
   </Card>
-  <Card title="API Reference" icon="code" href="/api-reference/introduction">
-    Complete reference for /v1/verify, /v1/chat, and the tool registry.
-  </Card>
-  <Card title="Python SDK" icon="python" href="/guides/python-sdk">
-    pip install promptwall — the official Python client.
+  <Card title="Events" icon="chart-line" href="/modes/events" color="#A78BFA">
+    Observability-only ingest. Use when PromptWall did **not** run the
+    LLM (your own SDK, a vendor like Moveo, or a log archive).
   </Card>
 </CardGroup>
 
-## Three modes, one API
+## How the modes compare
 
-| Mode | Who pays for LLM tokens | Best for |
-|------|-------------------------|----------|
-| **Verify only** | No LLM call | Customer already has an answer, wants it validated |
-| **Webhook BYOK** | You (customer's API key) | You control the LLM, we govern the pipeline |
-| **Webhook Managed** | PromptWall | Fastest integration; we run the LLM for you |
+| Feature             | Proxy                      | Verify                | Events                  |
+|---------------------|----------------------------|-----------------------|-------------------------|
+| Endpoint            | `POST /v1/chat/completions` | `POST /v1/verify`    | `POST /v1/events`       |
+| Required keys       | OpenAI **and** PromptWall  | PromptWall only       | PromptWall only         |
+| Control modes       | observe / guard / verify / full | block / rewrite / regenerate | none (read-only) |
+| Code change         | Two env vars               | Two SDK lines         | One HTTP POST           |
+| Observability       | ✓ Always on                | ✓ Always on           | ✓ Always on             |
 
-See [Modes](/concepts/modes) for the full breakdown.
+> **You can mix modes.** Some apps use Proxy while others use Verify
+> or Events. They all write to the same canonical event log and show up
+> on the same Observability dashboard.
 
-## Production-ready from day one
+## What you get out of the box
 
-- **SOC2-friendly architecture** — KMS envelope encryption, audit archival, zero-retention mode
-- **Multi-tenant isolation** — row-level security at the database layer
-- **EU hosting** — Frankfurt region with GDPR-compliant data residency
-- **SLA tiers** — 99.5% / 99.9% / 99.99% uptime based on plan
+- **Org-wide AI activity** sliced by use case · team · app · integration
+- **Cost & token rollups** at 1-minute / 1-hour / 1-day granularity
+- **Trace drill-through** for every request (prompt → guards → upstream → policy hits)
+- **Failure-cluster panel** showing the top patterns this week
+- **Policy synthesis** that watches traces and suggests new guards
+- **Usage-based billing** primitives (volume only — never per use case)
+
+Next: pick an integration mode →

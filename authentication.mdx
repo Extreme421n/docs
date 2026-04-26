@@ -1,0 +1,70 @@
+---
+title: "Authentication"
+description: "Two distinct keys: your OpenAI key (Proxy mode only) and your PromptWall key (every mode)."
+---
+
+PromptWall distinguishes between two API keys. Knowing which one to
+send where is the most important thing on this page.
+
+## PromptWall API key (every mode)
+
+Issued by PromptWall when you create an application in the
+[Console](https://www.prompt-wall.com/login). Format: `pw_…`.
+
+Send it on **every** PromptWall request:
+
+| Endpoint              | Required header                                    |
+|-----------------------|----------------------------------------------------|
+| `POST /v1/chat/completions` (Proxy) | `X-PromptWall-Api-Key: pw_…` *or* `X-API-Key: pw_…` |
+| `POST /v1/verify`     | `X-API-Key: pw_…` *or* `Authorization: Bearer pw_…` |
+| `POST /v1/chat`       | `X-API-Key: pw_…` *or* `Authorization: Bearer pw_…` |
+| `POST /v1/events`     | `X-API-Key: pw_…` *or* `Authorization: Bearer pw_…` |
+
+In Proxy mode we use a separate header (`X-PromptWall-Api-Key`)
+because the standard `Authorization: Bearer …` slot already carries
+your **OpenAI** key — see below.
+
+## OpenAI API key (Proxy mode only)
+
+Issued by OpenAI. Format: `sk-…`. PromptWall **never reads or stores**
+this key — it is forwarded verbatim to `api.openai.com`. Your OpenAI
+billing relationship is unchanged.
+
+```bash Proxy mode
+curl https://api.prompt-wall.com/v1/chat/completions \
+  -H "Authorization: Bearer $OPENAI_API_KEY"   \   # ← OpenAI key
+  -H "X-PromptWall-Api-Key: $PROMPTWALL_KEY"   \   # ← PromptWall key
+  -H "Content-Type: application/json" \
+  -d '{"model":"gpt-4o-mini","messages":[…]}'
+```
+
+In Verify, Webhook, and Events modes you do **not** send an OpenAI key
+to PromptWall — those modes don't call OpenAI on your behalf.
+
+## Example: Verify and Events modes
+
+```bash Verify
+curl https://api.prompt-wall.com/v1/verify \
+  -H "X-API-Key: $PROMPTWALL_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"prompt":"…","answer":"…"}'
+```
+
+```bash Events
+curl https://api.prompt-wall.com/v1/events \
+  -H "X-API-Key: $PROMPTWALL_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"request_id":"…","mode":"ingest","provider":"openai","model":"gpt-4o-mini"}'
+```
+
+## Storing keys safely
+
+- Treat the PromptWall key like any other secret — env vars or a
+  secrets manager. Never commit it.
+- Rotate by creating a new application in the Console and migrating
+  callers; the old key is revoked when its application is deleted.
+- All proxy traffic is auth-checked **before** PromptWall contacts
+  OpenAI, so a missing or invalid PromptWall key cannot result in
+  charges on your OpenAI account.
+
+→ Next: [Quickstart](/quickstart)

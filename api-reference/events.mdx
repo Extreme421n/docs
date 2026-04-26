@@ -1,0 +1,120 @@
+---
+title: "POST /v1/events"
+description: "Observability-only ingest. Ship traces from your SDK / vendor / log archive."
+---
+
+`POST https://api.prompt-wall.com/v1/events`
+
+This endpoint is **observe-only** — there is no enforcement, no
+mutation, no upstream call. Use it when PromptWall did not run the LLM.
+
+## Request
+
+### Required headers
+
+| Header                    | Value                                  |
+|---------------------------|----------------------------------------|
+| `X-API-Key`               | Your PromptWall API key (`pw_…`)       |
+| `Content-Type`            | `application/json`                     |
+
+`Authorization: Bearer pw_…` is also accepted.
+
+### Body — single event
+
+```json
+{
+  "request_id":      "abc-123",         // required, ≤ 64 chars, idempotency key
+  "mode":            "ingest",          // ingest | proxy | sdk | vendor
+  "started_at":      "2026-04-26T10:00:00Z",
+  "finished_at":     "2026-04-26T10:00:01Z",
+  "provider":        "openai",
+  "model":           "gpt-4o-mini",
+  "use_case":        "customer_support",
+  "team_id":         "support-eu",
+  "integration_id":  "sdk:my-app@1.0",
+  "end_user_id":     "user-pseudonym",
+  "session_id":      "conversation-id",
+  "prompt_tokens":   42,
+  "completion_tokens": 110,
+  "total_tokens":    152,
+  "cost_usd":        0.0008,
+  "latency_ms":      820,
+  "status":          "ok",                  // ok | error | blocked | rewritten | regenerated
+  "final_decision":  "pass",                // optional outcome
+  "risk_score":      0.05
+}
+```
+
+### Body — batch (up to 500 events)
+
+```json
+{
+  "events": [
+    { "request_id": "abc-1", … },
+    { "request_id": "abc-2", … }
+  ]
+}
+```
+
+### Field reference
+
+| Field             | Required | Notes                                                     |
+|-------------------|----------|-----------------------------------------------------------|
+| `request_id`      | yes      | 1–64 chars. Primary key. Re-submitting is idempotent.     |
+| `mode`            | no       | `ingest` (default) · `proxy` · `sdk` · `vendor`           |
+| `started_at`      | no       | ISO-8601 or epoch seconds. Defaults to "now".             |
+| `finished_at`     | no       | Used to compute latency when `latency_ms` is omitted.     |
+| `provider`        | no       | `openai` · `anthropic` · `azure` · `google` · …           |
+| `model`           | no       | Free-form. Useful for cost rollups.                       |
+| `use_case`, `team_id`, `integration_id`, `end_user_id`, `session_id` | no | Dashboard dimensions. |
+| `prompt_tokens`, `completion_tokens`, `total_tokens` | no | Tokens. `total_tokens` is computed if you only send the splits. |
+| `cost_usd`        | no       | Numeric. If omitted PromptWall doesn't estimate.          |
+| `latency_ms`      | no       | Integer ms. Computed from timestamps if omitted.          |
+| `status`          | no       | `ok` · `error` · `blocked` · `rewritten` · `regenerated`  |
+| `final_decision`  | no       | Outcome label for the trace.                              |
+| `risk_score`      | no       | 0.0 – 1.0.                                                |
+| `policy_hits`     | no       | Array — what policies fired in your own pipeline.         |
+
+## Response
+
+### Single event accepted
+
+```json
+{
+  "ok":       true,
+  "accepted": 1,
+  "skipped":  0,
+  "rejected": [],
+  "total":    1
+}
+```
+
+### Batch with mixed outcomes
+
+```json
+{
+  "ok":       false,
+  "accepted": 498,
+  "skipped":  1,
+  "rejected": [
+    {"index": 12, "request_id": "bad",
+     "error": "request_id required (1..64 chars)"}
+  ],
+  "total":    500
+}
+```
+
+HTTP status:
+
+| Status | When                                                          |
+|--------|---------------------------------------------------------------|
+| 200    | All events accepted (or all skipped as duplicates)            |
+| 207    | Mixed — some accepted, some rejected                          |
+| 400    | Whole batch rejected (e.g. all events failed validation)      |
+| 401    | Missing / invalid PromptWall API key                          |
+
+## Idempotency
+
+`request_id` is the primary key in the canonical `traces` table.
+Submitting the same `request_id` twice never creates two rows — the
+second call returns `skipped: true`. This makes batch retries safe.

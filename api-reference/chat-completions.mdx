@@ -1,0 +1,97 @@
+---
+title: "POST /v1/chat/completions"
+description: "OpenAI-compatible proxy endpoint. Forwards to upstream + observes + (optionally) enforces."
+---
+
+`POST https://api.prompt-wall.com/v1/chat/completions`
+
+Drop-in replacement for OpenAI's chat-completions endpoint. The
+request body and response body are byte-identical to OpenAI's API; the
+only PromptWall-specific surface lives in the **headers**.
+
+## Request
+
+### Required headers
+
+| Header                    | Value                                        |
+|---------------------------|----------------------------------------------|
+| `Authorization`           | `Bearer <OPENAI_API_KEY>` (your OpenAI key)  |
+| `X-PromptWall-Api-Key`    | Your PromptWall API key (`pw_…`)             |
+| `Content-Type`            | `application/json`                           |
+
+### Optional headers (dashboard dimensions)
+
+| Header              | Default            | Notes                          |
+|---------------------|--------------------|--------------------------------|
+| `X-Use-Case`        | `default`          | Tag for slicing in Observability |
+| `X-Team-Id`         | (unset)            | Tag for slicing                |
+| `X-Integration-Id`  | `proxy:openai`     | Override to identify SDK / version |
+| `X-End-User-Id`     | (unset)            | End-user pseudonym             |
+| `X-Session-Id`      | (unset)            | Multi-turn session correlation |
+| `X-PromptWall-Mode` | (tenant default)   | `observe` · `guard` · `verify` · `full` |
+
+### Body
+
+Identical to OpenAI's `chat.completions.create`. Streaming
+(`"stream": true`) is fully supported.
+
+## Response
+
+### On success
+
+Identical to OpenAI's response, plus two extra response headers:
+
+| Header                       | Meaning                                    |
+|------------------------------|--------------------------------------------|
+| `X-PromptWall-Request-Id`    | Trace ID — find this row on the dashboard  |
+| `X-PromptWall-Mode`          | Effective mode (after stream-downgrade)    |
+
+### On block (control modes only)
+
+If a control mode triggers a **block**, the response is HTTP 200 with
+an OpenAI-shaped body:
+
+```json
+{
+  "id":      "chatcmpl-pw-…",
+  "object":  "chat.completion",
+  "model":   "gpt-4o-mini",
+  "choices": [{
+    "index":  0,
+    "message": {"role": "assistant",
+                "content": "Request blocked by PromptWall policy."},
+    "finish_reason": "content_filter"
+  }],
+  "usage":   {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
+  "system_fingerprint": "promptwall_blocked",
+  "pw_block": {"reason": "prompt_injection_blocked (confidence 0.95)"}
+}
+```
+
+The `pw_block.reason` field is PromptWall-specific — your app can
+react explicitly when present, or treat the call as an HTTP 200
+content-filter trip if you don't.
+
+### Error responses
+
+| Status | Body                                                            | When                                |
+|--------|-----------------------------------------------------------------|-------------------------------------|
+| 401    | `{"ok": false, "error": "PromptWall API key required …"}`       | Missing / invalid PromptWall key    |
+| 504    | `{"error": {"message": "upstream timeout", "type": "upstream_timeout"}}` | Upstream did not respond in time |
+| 502    | `{"error": {"message": "upstream connection error", "type": "upstream_error"}}` | Network failure to upstream  |
+| Other  | Forwarded verbatim from upstream                                | OpenAI returned an error            |
+
+## Health probe
+
+`GET /v1/chat/completions/health` (no auth) returns:
+
+```json
+{
+  "ok":       true,
+  "upstream": "https://api.openai.com/v1",
+  "endpoint": "/v1/chat/completions",
+  "modes":    ["non-stream", "stream"]
+}
+```
+
+Useful for liveness checks that don't exercise the upstream.
